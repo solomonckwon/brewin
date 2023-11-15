@@ -6,6 +6,9 @@ func main() {
   b(); /* prints 2 */
   a(); /* prints 3 */
   b(); /* prints 4 */
+  if(a == b) {
+    print(5);
+  }
 }
 
 /*
@@ -14,5 +17,6 @@ func main() {
 2
 3
 4
+5
 *OUT*
 */

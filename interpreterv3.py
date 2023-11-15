@@ -6,7 +6,6 @@ from env_v2 import EnvironmentManager
 from intbase import InterpreterBase, ErrorType
 from type_valuev2 import Type, Value, create_value, get_printable
 
-
 class ExecStatus(Enum):
     CONTINUE = 1
     RETURN = 2
@@ -47,11 +46,19 @@ class Interpreter(InterpreterBase):
     def __get_func_by_name(self, name, num_params):
         # check to see if name is set as lambda in env
         if name not in self.func_name_to_ast:
-            lambda_func = self.env.get(name)
-            if lambda_func.type() == Type.LAMBDA:
-                return lambda_func.value()
+            func = self.env.get(name)
+            if func.type() == Type.LAMBDA or func.type() == Type.FUNC:
+                return func.value()
             super().error(ErrorType.NAME_ERROR, f"Function {name} not found")
         candidate_funcs = self.func_name_to_ast[name]
+        if num_params == -1:
+            if len(candidate_funcs) == 1:
+                num_params = list(candidate_funcs.keys())[0]
+                return candidate_funcs[num_params]
+            super().error(
+                ErrorType.NAME_ERROR,
+                f"Can't assign {name} to variable, overloaded function"
+            )
         if num_params not in candidate_funcs:
             super().error(
                 ErrorType.NAME_ERROR,
@@ -154,7 +161,13 @@ class Interpreter(InterpreterBase):
             var_name = expr_ast.get("name")
             val = self.env.get(var_name)
             if val is None:
-                super().error(ErrorType.NAME_ERROR, f"Variable {var_name} not found")
+                val = self.__get_func_by_name(var_name, -1)
+                if val.elem_type != InterpreterBase.FUNC_DEF and val.elem_type != InterpreterBase.LAMBDA_DEF:
+                    super().error(ErrorType.NAME_ERROR, f"Variable {var_name} not found")
+                if val.elem_type == InterpreterBase.FUNC_DEF:
+                    return Value(Type.FUNC, val)
+                if val.elem_type == InterpreterBase.LAMBDA_DEF:
+                    return Value(Type.LAMBDA, val)
             return val
         if expr_ast.elem_type == InterpreterBase.FCALL_DEF:
             return self.__call_func(expr_ast)
@@ -177,22 +190,29 @@ class Interpreter(InterpreterBase):
                 ErrorType.TYPE_ERROR,
                 f"Incompatible types for {arith_ast.elem_type} operation",
             )
-        if arith_ast.elem_type not in self.op_to_lambda[left_value_obj.type()]:
+        
+        if right_value_obj.type() == Type.NIL:
+            op_type = right_value_obj.type()
+        else:
+            op_type = left_value_obj.type()
+
+        if arith_ast.elem_type not in self.op_to_lambda[op_type]:
             super().error(
                 ErrorType.TYPE_ERROR,
-                f"Incompatible operator {arith_ast.elem_type} for type {left_value_obj.type()}",
+                f"Incompatible operator {arith_ast.elem_type} for type {op_type}",
             )
-        f = self.op_to_lambda[left_value_obj.type()][arith_ast.elem_type]
-        # print("here eval")
-        # print(arith_ast)
-        # print("evaluating " + str(left_value_obj.type()) + " " + str(arith_ast.elem_type))
-        # print("obj left: " + str(left_value_obj.value()))
+        f = self.op_to_lambda[op_type][arith_ast.elem_type]
         return f(left_value_obj, right_value_obj)
 
     def __compatible_types(self, oper, obj1, obj2):
         # DOCUMENT: allow comparisons ==/!= of anything against anything
         if oper in ["==", "!="]:
             return True
+        # Use of any comparison operator other than == and != on a 
+        # variable holding a function/closure must result in an error of ErrorType.TYPE_ERROR.
+        if oper not in ["==", "!="]:
+            if obj1.type() == Type.LAMBDA or obj2 == Type.LAMBDA or obj1.type() == Type.FUNC or obj2 == Type.FUNC:
+                return False
         if oper in ["||", "&&"]:
             if (obj1.type() == Type.BOOL and obj2.type() == Type.INT) or (obj1.type() == Type.INT and obj2.type() == Type.BOOL):
                 return True
@@ -283,6 +303,26 @@ class Interpreter(InterpreterBase):
         self.op_to_lambda[Type.NIL]["!="] = lambda x, y: Value(
             Type.BOOL, x.type() != y.type() or x.value() != y.value()
         )
+        # set up operations on functions
+        self.op_to_lambda[Type.FUNC] = {}
+        self.op_to_lambda[Type.FUNC]["=="] = lambda x, y: Value(
+            Type.BOOL, x.value().get("name") == y.value().get("name") and len(x.value().get("args")) == len(y.value().get("args"))
+        )
+        self.op_to_lambda[Type.FUNC]["!="] = lambda x, y: Value(
+            Type.BOOL, x.value().get("name") != y.value().get("name") or len(x.value().get("args")) != len(y.value().get("args"))
+        )
+        # set up operation on lambdas
+        self.op_to_lambda[Type.LAMBDA] = {}
+        self.op_to_lambda[Type.LAMBDA]["=="] = lambda x, y: Value(
+            Type.BOOL, x.value().get("name") == y.value().get("name") and len(x.value().get("args")) == len(y.value().get("args"))
+        )
+        self.op_to_lambda[Type.LAMBDA]["!="] = lambda x, y: Value(
+            Type.BOOL, x.value().get("name") != y.value().get("name") or len(x.value().get("args")) != len(y.value().get("args"))
+        )
+        # NEED TO FIX THIS ?
+        # Note that a copy of a closure or function (e.g., one returned by a function, 
+        # since functions return deep copies) is NOT the same as the original closure/function, 
+        # so comparison using == would be false, and != would be true:
 
     def __do_if(self, if_ast):
         cond_ast = if_ast.get("condition")

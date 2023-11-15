@@ -9,6 +9,7 @@ class Type(Enum):
     STRING = 3
     NIL = 4
     LAMBDA = 5
+    FUNC = 6
 
 
 # Represents a value, which has a type and its value

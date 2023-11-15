@@ -1,0 +1,40 @@
+func foo() {
+    print(2);
+}
+
+func main() {
+  x = foo;
+  y  = foo;
+  if (x == y) {
+    print(0);
+  }
+  y = main;
+  if (x != y) {
+    print(1);
+  }
+  x();
+  if(foo == x) {
+    print(3);
+  }
+  if(y != foo) {
+    print(4);
+  }
+  if(nil != foo) {
+    print(5);
+  }
+  if(foo != nil) {
+    print(6);
+  }
+}
+
+/*
+*OUT*
+0
+1
+2
+3
+4
+5
+6
+*OUT*
+*/
