@@ -215,10 +215,10 @@ class Interpreter(InterpreterBase):
             x.type(), x.value() // y.value()
         )
         self.op_to_lambda[Type.INT]["=="] = lambda x, y: Value(
-            Type.BOOL, x.type() == y.type() and x.value() == y.value()
+            Type.BOOL, (x.type() == y.type() or y.type() == Type.BOOL) and x.value() == y.value()
         )
         self.op_to_lambda[Type.INT]["!="] = lambda x, y: Value(
-            Type.BOOL, x.type() != y.type() or x.value() != y.value()
+            Type.BOOL, (x.type() != y.type() and y.type() != Type.BOOL) or x.value() != y.value()
         )
         self.op_to_lambda[Type.INT]["<"] = lambda x, y: Value(
             Type.BOOL, x.value() < y.value()
@@ -252,10 +252,10 @@ class Interpreter(InterpreterBase):
             x.type(), x.value() or y.value()
         )
         self.op_to_lambda[Type.BOOL]["=="] = lambda x, y: Value(
-            Type.BOOL, x.type() == y.type() and x.value() == y.value()
+            Type.BOOL, (x.type() == y.type() or y.type() == Type.INT) and x.value() == y.value()
         )
         self.op_to_lambda[Type.BOOL]["!="] = lambda x, y: Value(
-            Type.BOOL, x.type() != y.type() or x.value() != y.value()
+            Type.BOOL, (x.type() != y.type() and y.type() != Type.BOOL) or x.value() != y.value()
         )
 
         #  set up operations on nil

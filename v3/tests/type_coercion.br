@@ -1,0 +1,13 @@
+func main() {
+ if(1 == true) {print("1");}
+ if(true == 1) {print("2");}
+ if(1){print("3");}
+}
+
+/*
+*OUT*
+1
+2
+3
+*OUT*
+*/
