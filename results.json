@@ -2,7 +2,7 @@
     "tests": [
         {
             "name": "Correctness | type_coercion",
-            "score": 0,
+            "score": 1,
             "max_score": 1,
             "visibility": "visible"
         }

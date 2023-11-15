@@ -187,16 +187,21 @@ class Interpreter(InterpreterBase):
         # DOCUMENT: allow comparisons ==/!= of anything against anything
         if oper in ["==", "!="]:
             return True
+        if oper in ["||", "&&"]:
+            if (obj1.type() == Type.BOOL and obj2.type() == Type.INT) or (obj1.type() == Type.INT and obj2.type() == Type.BOOL):
+                return True
         return obj1.type() == obj2.type()
 
-    def __eval_unary(self, arith_ast, t, f):
+    def __eval_unary(self, arith_ast, type, function):
         value_obj = self.__eval_expr(arith_ast.get("op1"))
-        if value_obj.type() != t:
+        if value_obj.type() == Type.INT:
+            return Value(Type.BOOL, function(value_obj.value()))
+        if value_obj.type() != type:
             super().error(
                 ErrorType.TYPE_ERROR,
                 f"Incompatible type for {arith_ast.elem_type} operation",
             )
-        return Value(t, f(value_obj.value()))
+        return Value(type, function(value_obj.value()))
 
     def __setup_ops(self):
         self.op_to_lambda = {}
@@ -231,6 +236,12 @@ class Interpreter(InterpreterBase):
         )
         self.op_to_lambda[Type.INT][">="] = lambda x, y: Value(
             Type.BOOL, x.value() >= y.value()
+        )
+        self.op_to_lambda[Type.INT]["&&"] = lambda x, y: Value(
+            Type.BOOL, x.value() and y.value()
+        )
+        self.op_to_lambda[Type.INT]["||"] = lambda x, y: Value(
+            Type.BOOL, x.value() or y.value()
         )
         #  set up operations on strings
         self.op_to_lambda[Type.STRING] = {}
@@ -270,6 +281,8 @@ class Interpreter(InterpreterBase):
     def __do_if(self, if_ast):
         cond_ast = if_ast.get("condition")
         result = self.__eval_expr(cond_ast)
+        if result.type() == Type.INT:
+            result = Value(Type.BOOL, result.value())
         if result.type() != Type.BOOL:
             super().error(
                 ErrorType.TYPE_ERROR,
@@ -292,6 +305,8 @@ class Interpreter(InterpreterBase):
         run_while = Interpreter.TRUE_VALUE
         while run_while.value():
             run_while = self.__eval_expr(cond_ast)
+            if run_while.type() == Type.INT:
+                run_while = Value(Type.BOOL, run_while.value())
             if run_while.type() != Type.BOOL:
                 super().error(
                     ErrorType.TYPE_ERROR,
