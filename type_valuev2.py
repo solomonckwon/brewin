@@ -8,6 +8,7 @@ class Type(Enum):
     BOOL = 2
     STRING = 3
     NIL = 4
+    LAMBDA = 5
 
 
 # Represents a value, which has a type and its value

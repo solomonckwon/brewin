@@ -45,7 +45,11 @@ class Interpreter(InterpreterBase):
             self.func_name_to_ast[func_name][num_params] = func_def
 
     def __get_func_by_name(self, name, num_params):
+        # check to see if name is set as lambda in env
         if name not in self.func_name_to_ast:
+            lambda_func = self.env.get(name)
+            if lambda_func.type() == Type.LAMBDA:
+                return lambda_func.value()
             super().error(ErrorType.NAME_ERROR, f"Function {name} not found")
         candidate_funcs = self.func_name_to_ast[name]
         if num_params not in candidate_funcs:
@@ -160,6 +164,8 @@ class Interpreter(InterpreterBase):
             return self.__eval_unary(expr_ast, Type.INT, lambda x: -1 * x)
         if expr_ast.elem_type == Interpreter.NOT_DEF:
             return self.__eval_unary(expr_ast, Type.BOOL, lambda x: not x)
+        if expr_ast.elem_type == InterpreterBase.LAMBDA_DEF:
+            return Value(Type.LAMBDA, expr_ast)
 
     def __eval_op(self, arith_ast):
         left_value_obj = self.__eval_expr(arith_ast.get("op1"))

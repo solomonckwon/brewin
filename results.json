@@ -5,6 +5,12 @@
             "score": 1,
             "max_score": 1,
             "visibility": "visible"
+        },
+        {
+            "name": "Correctness | lambdas",
+            "score": 1,
+            "max_score": 1,
+            "visibility": "visible"
         }
     ]
 }
