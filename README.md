@@ -2,6 +2,8 @@
 
 1. Returning functions
 2. Parameter passing by reference
+3. Closures
+4. Passing functions as arguments (?)
 
 # Done
 

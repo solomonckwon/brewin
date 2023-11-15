@@ -48,8 +48,10 @@ class Interpreter(InterpreterBase):
         if name not in self.func_name_to_ast:
             func = self.env.get(name)
             if func.type() == Type.LAMBDA or func.type() == Type.FUNC:
+                if len(func.value().get("args")) != num_params:
+                    super().error(ErrorType.TYPE_ERROR, f"Invalid number of parameters for {name}")
                 return func.value()
-            super().error(ErrorType.NAME_ERROR, f"Function {name} not found")
+            super().error(ErrorType.TYPE_ERROR, f"Variable {name} is not a function")
         candidate_funcs = self.func_name_to_ast[name]
         if num_params == -1:
             if len(candidate_funcs) == 1:

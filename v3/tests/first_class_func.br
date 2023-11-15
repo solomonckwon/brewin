@@ -25,6 +25,7 @@ func main() {
   if(foo != nil) {
     print(6);
   }
+  a = 5;
 }
 
 /*
