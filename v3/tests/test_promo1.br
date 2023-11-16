@@ -8,6 +8,15 @@ func main() {
   b = 123 + false;
   print(b);
 
+  b = 123 - true;
+  print(b);
+
+  b = 123 * false;
+  print(b);
+
+  b = false * 123;
+  print(b);
+
   c = true + true;
   print(c);
   
@@ -20,6 +29,9 @@ func main() {
 124
 124
 123
+122
+0
+0
 2
 1
 *OUT*

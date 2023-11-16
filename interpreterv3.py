@@ -47,10 +47,14 @@ class Interpreter(InterpreterBase):
         # check to see if name is set as lambda in env
         if name not in self.func_name_to_ast:
             func = self.env.get(name)
-            if func.type() == Type.LAMBDA or func.type() == Type.FUNC:
+            if func.type() == Type.FUNC:
                 if len(func.value().get("args")) != num_params:
                     super().error(ErrorType.TYPE_ERROR, f"Invalid number of parameters for {name}")
                 return func.value()
+            if func.type() == Type.LAMBDA:
+                if len((func.value()[0]).get("args")) != num_params:
+                    super().error(ErrorType.TYPE_ERROR, f"Invalid number of parameters for {name}")
+                return func
             super().error(ErrorType.TYPE_ERROR, f"Variable {name} is not a function")
         candidate_funcs = self.func_name_to_ast[name]
         if num_params == -1:
@@ -103,7 +107,12 @@ class Interpreter(InterpreterBase):
 
         actual_args = call_node.get("args")
         func_ast = self.__get_func_by_name(func_name, len(actual_args))
-        formal_args = func_ast.get("args")
+        if isinstance(func_ast, Value):
+            if func_ast.type()== Type.LAMBDA:
+                formal_args = (func_ast.value()[0]).get("args")
+            func_ast = func_ast.value()[0]
+        else:
+            formal_args = func_ast.get("args")
         if len(actual_args) != len(formal_args):
             super().error(
                 ErrorType.NAME_ERROR,
@@ -180,7 +189,102 @@ class Interpreter(InterpreterBase):
         if expr_ast.elem_type == Interpreter.NOT_DEF:
             return self.__eval_unary(expr_ast, Type.BOOL, lambda x: not x)
         if expr_ast.elem_type == InterpreterBase.LAMBDA_DEF:
-            return Value(Type.LAMBDA, expr_ast)
+            return self.__handle_lambdas(expr_ast)
+    
+    def __handle_lambdas(self, lambda_ast):
+        lambEnvironment = EnvironmentManager()
+        var = set()
+        if lambda_ast.get('args') is not None:
+            for arg in lambda_ast.get('args'):
+                var.update(self.__extract_variables(arg))
+        
+        statements = lambda_ast.get("statements")
+        if statements is not None:
+            for statement in statements:
+                var.update(self.__extract_variables(statement))
+        print(var)
+        for i in var:
+            print(i)
+            val = self.env.get(i)
+            if val is not None:
+                lambEnvironment.set(i, val)
+
+        print(lambEnvironment.environment)
+        return Value(Type.LAMBDA, [lambda_ast, lambEnvironment])
+    
+    
+    def __extract_variables(self, statement):
+        variable_names = set()
+        #expressions
+        if statement.elem_type in ["int", "string", "bool", "nil"]:
+            return set()
+        
+        if statement.elem_type == "arg":
+            variable_names.update(statement.get('name'))
+
+        elif statement.elem_type in Interpreter.BIN_OPS:
+            if statement.get('op1').elem_type == InterpreterBase.VAR_DEF:
+                variable_names.update(statement.get('op1').get('name'))  
+            else:
+                variable_names.update(self.__extract_variables(statement.get('op1')))
+            if statement.get('op2').elem_type == InterpreterBase.VAR_DEF:
+                variable_names.update(statement.get('op2').get('name'))  
+            else:
+                variable_names.update(self.__extract_variables(statement.get('op2')))
+
+        elif statement.elem_type in ["neg", "!"]:
+            if statement.get('op1').elem_type == InterpreterBase.VAR_DEF:
+                variable_names.update(statement.get('op1').get('name'))  
+            else:
+                variable_names.update(self.__extract_variables(statement.get('op1')))
+                
+        elif statement.elem_type == '=':
+            expression = statement.get('expression')
+            if expression.elem_type == InterpreterBase.VAR_DEF:
+                variable_names.update(expression.get('name'))        
+            else:
+                variable_names.update(self.__extract_variables(expression))
+        
+        elif statement.elem_type == 'fcall':
+            args = statement.get('args')
+            for arg in args:
+                if arg.elem_type == InterpreterBase.VAR_DEF:
+                    variable_names.update(arg.get('name'))
+                else:
+                    variable_names.update(self.__extract_variables(arg))
+
+        elif statement.elem_type == 'if':
+            condition = statement.get('condition')
+            if condition.elem_type == InterpreterBase.VAR_DEF:
+                variable_names.update(condition.get('name'))
+            else:
+                variable_names.update(self.__extract_variables(condition))
+            statements = statement.get('statements')
+            else_statements = statement.get('else_statements')
+            for stmt in statements:
+                variable_names.update(self.__extract_variables(stmt))
+            for stmt in else_statements:
+                variable_names.update(self.__extract_variables(stmt))
+
+        elif statement.elem_type == 'while':
+            condition = statement.get('condition')
+            if condition.elem_type == InterpreterBase.VAR_DEF:
+                variable_names.update(condition.get('name'))
+            else:
+                variable_names.update(self.__extract_variables(condition))
+
+            for stmt in statements:
+                variable_names.update(self.__extract_variables(stmt))
+
+        elif statement.elem_type == 'return':
+            expression = statement.get('expression')
+            if expression is not None:
+                if expression.elem_type == Interpreter.VAR_DEF:
+                    variable_names.update(expression.get('name'))
+                else:
+                    variable_names.update(self.__extract_variables(expression))
+
+        return variable_names
 
     def __eval_op(self, arith_ast):
         left_value_obj = self.__eval_expr(arith_ast.get("op1"))
@@ -216,6 +320,9 @@ class Interpreter(InterpreterBase):
             if obj1.type() == Type.LAMBDA or obj2 == Type.LAMBDA or obj1.type() == Type.FUNC or obj2 == Type.FUNC:
                 return False
         if oper in ["||", "&&"]:
+            if (obj1.type() == Type.BOOL and obj2.type() == Type.INT) or (obj1.type() == Type.INT and obj2.type() == Type.BOOL):
+                return True
+        if oper in ["+", "-", "*"]:
             if (obj1.type() == Type.BOOL and obj2.type() == Type.INT) or (obj1.type() == Type.INT and obj2.type() == Type.BOOL):
                 return True
         return obj1.type() == obj2.type()
@@ -296,7 +403,15 @@ class Interpreter(InterpreterBase):
         self.op_to_lambda[Type.BOOL]["!="] = lambda x, y: Value(
             Type.BOOL, (x.type() != y.type() and y.type() != Type.BOOL) or x.value() != y.value()
         )
-
+        self.op_to_lambda[Type.BOOL]["+"] = lambda x, y: Value(
+            Type.INT, x.value() + y.value()
+        )
+        self.op_to_lambda[Type.BOOL]["-"] = lambda x, y: Value(
+            Type.INT, x.value() - y.value()
+        )
+        self.op_to_lambda[Type.BOOL]["*"] = lambda x, y: Value(
+            Type.INT, x.value() * y.value()
+        )
         #  set up operations on nil
         self.op_to_lambda[Type.NIL] = {}
         self.op_to_lambda[Type.NIL]["=="] = lambda x, y: Value(
@@ -309,18 +424,19 @@ class Interpreter(InterpreterBase):
         self.op_to_lambda[Type.FUNC] = {}
         self.op_to_lambda[Type.FUNC]["=="] = lambda x, y: Value(
             Type.BOOL, x.value().get("name") == y.value().get("name") and len(x.value().get("args")) == len(y.value().get("args"))
-        )
+        ) if x.type() == y.type() else Value(Type.BOOL, False)
         self.op_to_lambda[Type.FUNC]["!="] = lambda x, y: Value(
             Type.BOOL, x.value().get("name") != y.value().get("name") or len(x.value().get("args")) != len(y.value().get("args"))
-        )
+        ) if x.type() == y.type() else Value(Type.BOOL, True)
         # set up operation on lambdas
         self.op_to_lambda[Type.LAMBDA] = {}
         self.op_to_lambda[Type.LAMBDA]["=="] = lambda x, y: Value(
-            Type.BOOL, x.value().get("name") == y.value().get("name") and len(x.value().get("args")) == len(y.value().get("args"))
-        )
+            Type.BOOL, (x.value()[0]).get("name") == (y.value()[0]).get("name") and 
+            len((x.value()[0]).get("args")) == len((y.value()[0]).get("args"))
+        ) if x.type() == y.type() else Value(Type.BOOL, False)
         self.op_to_lambda[Type.LAMBDA]["!="] = lambda x, y: Value(
-            Type.BOOL, x.value().get("name") != y.value().get("name") or len(x.value().get("args")) != len(y.value().get("args"))
-        )
+            Type.BOOL, (x.value()[0]).get("name") != (y.value()[0]).get("name") or len((x.value()[0]).get("args")) != len((y.value()[0]).get("args"))
+        ) if x.type() == y.type() else Value(Type.BOOL, True)
         # NEED TO FIX THIS ?
         # Note that a copy of a closure or function (e.g., one returned by a function, 
         # since functions return deep copies) is NOT the same as the original closure/function, 

@@ -1,0 +1,38 @@
+func main() {
+    b = 5;
+    f = lambda(a) { print(a*b); }; /* captures b = 5 by making a copy */
+    b = 7;                         /* has no impact on captured b */
+
+    f(3);     /* prints 15 */
+
+
+    a = 2;
+    g = lambda(b) {a = a + 2; };
+    g(3);
+    print(a);
+
+    x = foo();
+    x(2);
+
+    y = 5;
+    z = bar;
+    z();
+}
+
+func foo() {
+    b = 5;
+    f = lambda(a) { print(a*b);};
+    return f;
+}
+
+func bar() {
+    print(y);
+}
+
+/*
+*OUT*
+15
+2
+10
+*OUT*
+*/

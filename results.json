@@ -17,6 +17,18 @@
             "score": 1,
             "max_score": 1,
             "visibility": "visible"
+        },
+        {
+            "name": "Correctness | test_promo1",
+            "score": 1,
+            "max_score": 1,
+            "visibility": "visible"
+        },
+        {
+            "name": "Correctness | closures",
+            "score": 0,
+            "max_score": 1,
+            "visibility": "visible"
         }
     ]
 }
