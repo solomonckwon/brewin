@@ -1,19 +1,16 @@
-func foo(ref x, delta) { /* x passed by reference, delta passed by value */
-  x = x + delta;
-  delta = 0;
-}
-
 func main() {
-  a = 10;
-  delta = 1;
-  foo(a, delta);
-  print(a);     /* prints 11 */
-  print(delta); /* prints 1 */
+  x = 0;
+  lam1 = lambda(ref x) { x = x + 1; print(x); };
+  lam2 = lambda(x) { x = x + 1; print(x); };
+  lam1(1);
+  lam2(1);
+  print(x);
 }
 
 /*
 *OUT*
-11
+1
+2
 1
 *OUT*
 */

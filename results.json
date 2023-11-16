@@ -2,7 +2,7 @@
     "tests": [
         {
             "name": "Correctness | ref",
-            "score": 1,
+            "score": 0,
             "max_score": 1,
             "visibility": "visible"
         },
