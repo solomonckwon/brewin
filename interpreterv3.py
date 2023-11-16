@@ -47,6 +47,8 @@ class Interpreter(InterpreterBase):
         # check to see if name is set as lambda in env
         if name not in self.func_name_to_ast:
             func = self.env.get(name)
+            if func == None:
+                super().error(ErrorType.NAME_ERROR, f"Function {func} not found")
             if func.type() == Type.FUNC:
                 if len(func.value().get("args")) != num_params:
                     super().error(ErrorType.TYPE_ERROR, f"Invalid number of parameters for {name}")
@@ -123,18 +125,22 @@ class Interpreter(InterpreterBase):
             )
         # print("before push", self.env.environment)
         self.env.push()
-        if isinstance(lambda_ast, Value):
-            if lambda_ast.type()== Type.LAMBDA:
+        # print("before push", self.env.environment)
+        if isinstance(lambda_ast, Value) and lambda_ast.type()== Type.LAMBDA:
                 save_env = self.env
                 self.env = (lambda_ast.value()[1])
                 # print(self.env.environment)
         for formal_ast, actual_ast in zip(formal_args, actual_args):
-            result = copy.deepcopy(self.__eval_expr(actual_ast))
             arg_name = formal_ast.get("name")
-            self.env.create(arg_name, result)
+            ## check for refarg
+            result = copy.deepcopy(self.__eval_expr(actual_ast))
+            if formal_ast.elem_type == 'refarg':
+                self.env.create(arg_name, "!ref!" + actual_ast.get('name'))
+            else:
+                self.env.create(arg_name, result)
         _, return_val = self.__run_statements(func_ast.get("statements"))
-        if isinstance(lambda_ast, Value):
-            if lambda_ast.type()== Type.LAMBDA:
+        if isinstance(lambda_ast, Value) and lambda_ast.type()== Type.LAMBDA:
+                ## save the environment before lambda
                 self.env = save_env
         self.env.pop()
         return return_val
@@ -165,6 +171,12 @@ class Interpreter(InterpreterBase):
 
     def __assign(self, assign_ast):
         var_name = assign_ast.get("name")
+        # for ref arg
+        value = self.env.get(var_name)
+        if isinstance(value, str):
+            if value[:5] == "!ref!":
+                var_name = value[5:]
+
         value_obj = self.__eval_expr(assign_ast.get("expression"))
         self.env.set(var_name, value_obj)
 
@@ -184,6 +196,10 @@ class Interpreter(InterpreterBase):
         if expr_ast.elem_type == InterpreterBase.VAR_DEF:
             var_name = expr_ast.get("name")
             val = self.env.get(var_name)
+            if isinstance(val, str):
+                if val[:5] == "!ref!":
+                    val = val[5:]
+                    val = self.env.get(val)
             if val is None:
                 val = self.__get_func_by_name(var_name, -1)
                 if val.elem_type != InterpreterBase.FUNC_DEF and val.elem_type != InterpreterBase.LAMBDA_DEF:
@@ -246,7 +262,7 @@ class Interpreter(InterpreterBase):
         if oper in ["||", "&&"]:
             if (obj1.type() == Type.BOOL and obj2.type() == Type.INT) or (obj1.type() == Type.INT and obj2.type() == Type.BOOL):
                 return True
-        if oper in ["+", "-", "*"]:
+        if oper in ["+", "-", "*", "/"]:
             if (obj1.type() == Type.BOOL and obj2.type() == Type.INT) or (obj1.type() == Type.INT and obj2.type() == Type.BOOL):
                 return True
         return obj1.type() == obj2.type()
@@ -267,22 +283,22 @@ class Interpreter(InterpreterBase):
         # set up operations on integers
         self.op_to_lambda[Type.INT] = {}
         self.op_to_lambda[Type.INT]["+"] = lambda x, y: Value(
-            x.type(), x.value() + y.value()
+            x.type(), int(x.value()) + int(y.value())
         )
         self.op_to_lambda[Type.INT]["-"] = lambda x, y: Value(
-            x.type(), x.value() - y.value()
+            x.type(), int(x.value()) - int(y.value())
         )
         self.op_to_lambda[Type.INT]["*"] = lambda x, y: Value(
-            x.type(), x.value() * y.value()
+            x.type(), int(x.value()) * int(y.value())
         )
         self.op_to_lambda[Type.INT]["/"] = lambda x, y: Value(
-            x.type(), x.value() // y.value()
+            x.type(), int(x.value()) // int(y.value())
         )
         self.op_to_lambda[Type.INT]["=="] = lambda x, y: Value(
-            Type.BOOL, (x.type() == y.type() or y.type() == Type.BOOL) and x.value() == y.value()
+            Type.BOOL, (x.type() == y.type() or y.type() == Type.BOOL) and bool(x.value()) == bool(y.value())
         )
         self.op_to_lambda[Type.INT]["!="] = lambda x, y: Value(
-            Type.BOOL, (x.type() != y.type() and y.type() != Type.BOOL) or x.value() != y.value()
+            Type.BOOL, (x.type() != y.type() and y.type() != Type.BOOL) or bool(x.value()) != bool(y.value())
         )
         self.op_to_lambda[Type.INT]["<"] = lambda x, y: Value(
             Type.BOOL, x.value() < y.value()
@@ -297,10 +313,10 @@ class Interpreter(InterpreterBase):
             Type.BOOL, x.value() >= y.value()
         )
         self.op_to_lambda[Type.INT]["&&"] = lambda x, y: Value(
-            Type.BOOL, x.value() and y.value()
+            Type.BOOL, bool(x.value() and y.value())
         )
         self.op_to_lambda[Type.INT]["||"] = lambda x, y: Value(
-            Type.BOOL, x.value() or y.value()
+            Type.BOOL, bool(x.value() or y.value())
         )
         #  set up operations on strings
         self.op_to_lambda[Type.STRING] = {}
@@ -322,19 +338,22 @@ class Interpreter(InterpreterBase):
             x.type(), x.value() or y.value()
         )
         self.op_to_lambda[Type.BOOL]["=="] = lambda x, y: Value(
-            Type.BOOL, (x.type() == y.type() or y.type() == Type.INT) and x.value() == y.value()
+            Type.BOOL, (x.type() == y.type() or y.type() == Type.INT) and bool(x.value()) == bool(y.value())
         )
         self.op_to_lambda[Type.BOOL]["!="] = lambda x, y: Value(
-            Type.BOOL, (x.type() != y.type() and y.type() != Type.BOOL) or x.value() != y.value()
+            Type.BOOL, (x.type() != y.type() and y.type() != Type.BOOL) or bool(x.value()) != bool(y.value())
         )
         self.op_to_lambda[Type.BOOL]["+"] = lambda x, y: Value(
-            Type.INT, x.value() + y.value()
+            Type.INT, int(x.value()) + int(y.value())
         )
         self.op_to_lambda[Type.BOOL]["-"] = lambda x, y: Value(
-            Type.INT, x.value() - y.value()
+            Type.INT, int(x.value()) - int(y.value())
         )
         self.op_to_lambda[Type.BOOL]["*"] = lambda x, y: Value(
-            Type.INT, x.value() * y.value()
+            Type.INT, int(x.value()) * int(y.value())
+        )
+        self.op_to_lambda[Type.BOOL]["/"] = lambda x, y: Value(
+            Type.INT, int(x.value()) // int(y.value())
         )
         #  set up operations on nil
         self.op_to_lambda[Type.NIL] = {}

@@ -1,0 +1,19 @@
+func foo(ref x, delta) { /* x passed by reference, delta passed by value */
+  x = x + delta;
+  delta = 0;
+}
+
+func main() {
+  a = 10;
+  delta = 1;
+  foo(a, delta);
+  print(a);     /* prints 11 */
+  print(delta); /* prints 1 */
+}
+
+/*
+*OUT*
+11
+1
+*OUT*
+*/

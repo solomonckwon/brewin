@@ -1,6 +1,12 @@
 {
     "tests": [
         {
+            "name": "Correctness | ref",
+            "score": 1,
+            "max_score": 1,
+            "visibility": "visible"
+        },
+        {
             "name": "Correctness | type_coercion",
             "score": 1,
             "max_score": 1,
@@ -26,6 +32,12 @@
         },
         {
             "name": "Correctness | closures",
+            "score": 1,
+            "max_score": 1,
+            "visibility": "visible"
+        },
+        {
+            "name": "Incorrectness | bad_var_func",
             "score": 1,
             "max_score": 1,
             "visibility": "visible"

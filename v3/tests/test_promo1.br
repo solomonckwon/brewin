@@ -1,27 +1,52 @@
 func main() {
   b = true + 123;
   print(b);
-  
   b = 123 + true;
   print(b);
-  
+  b = 123 + false;
+  print(b);
   b = 123 + false;
   print(b);
 
-  b = 123 - true;
-  print(b);
+  print(123 - true);
+  print(true - 123);
+  print(123 - false);
+  print(false - 123);
 
-  b = 123 * false;
-  print(b);
+  print(123 * true);
+  print(true * 123);
+  print(123 * false);
+  print(false * 123);
 
-  b = false * 123;
-  print(b);
+  print(123 / true);
+  print(true / 123);
+  print(false / 123);
 
-  c = true + true;
-  print(c);
+  print(123 || 123);
+  print(123 && 123);
+  print(0 || 0);
+  print(0 && 0);
+
+  print(true - false);
+  print(false - true);
+  print(false - false);
+  print(true - true);
+
+  print(true * false);
+  print(false * true);
+  print(false * false);
+  print(true * true);
+
+  print(true + false);
+  print(false + true);
+  print(false + false);
+  print(true + true);
+
+  print(false / true);
+  print(true / true);
   
-  d = false + true;
-  print(d);
+  print(!1);
+  print(!0);
 }
 
 /*
@@ -29,10 +54,37 @@ func main() {
 124
 124
 123
+123
 122
+-122
+123
+-123
+123
+123
 0
+0
+123
+0
+0
+true
+true
+false
+false
+1
+-1
+0
+0
+0
+0
+0
+1
+1
+1
 0
 2
+0
 1
+false
+true
 *OUT*
 */
