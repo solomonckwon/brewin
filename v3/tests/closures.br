@@ -2,7 +2,6 @@ func main() {
     b = 5;
     f = lambda(a) { print(a*b); }; /* captures b = 5 by making a copy */
     b = 7;                         /* has no impact on captured b */
-
     f(3);     /* prints 15 */
 
 
@@ -34,5 +33,6 @@ func bar() {
 15
 2
 10
+5
 *OUT*
 */

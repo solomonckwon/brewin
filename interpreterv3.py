@@ -57,6 +57,7 @@ class Interpreter(InterpreterBase):
                 return func
             super().error(ErrorType.TYPE_ERROR, f"Variable {name} is not a function")
         candidate_funcs = self.func_name_to_ast[name]
+        # check if overloaded function
         if num_params == -1:
             if len(candidate_funcs) == 1:
                 num_params = list(candidate_funcs.keys())[0]
@@ -75,6 +76,7 @@ class Interpreter(InterpreterBase):
     def __run_statements(self, statements):
         self.env.push()
         for statement in statements:
+            # print(statement)
             if self.trace_output:
                 print(statement)
             status = ExecStatus.CONTINUE
@@ -107,6 +109,7 @@ class Interpreter(InterpreterBase):
 
         actual_args = call_node.get("args")
         func_ast = self.__get_func_by_name(func_name, len(actual_args))
+        lambda_ast = func_ast
         if isinstance(func_ast, Value):
             if func_ast.type()== Type.LAMBDA:
                 formal_args = (func_ast.value()[0]).get("args")
@@ -118,18 +121,28 @@ class Interpreter(InterpreterBase):
                 ErrorType.NAME_ERROR,
                 f"Function {func_ast.get('name')} with {len(actual_args)} args not found",
             )
+        # print("before push", self.env.environment)
         self.env.push()
+        if isinstance(lambda_ast, Value):
+            if lambda_ast.type()== Type.LAMBDA:
+                save_env = self.env
+                self.env = (lambda_ast.value()[1])
+                # print(self.env.environment)
         for formal_ast, actual_ast in zip(formal_args, actual_args):
             result = copy.deepcopy(self.__eval_expr(actual_ast))
             arg_name = formal_ast.get("name")
             self.env.create(arg_name, result)
         _, return_val = self.__run_statements(func_ast.get("statements"))
+        if isinstance(lambda_ast, Value):
+            if lambda_ast.type()== Type.LAMBDA:
+                self.env = save_env
         self.env.pop()
         return return_val
 
     def __call_print(self, call_ast):
         output = ""
         for arg in call_ast.get("args"):
+            # print(self.env.environment)
             result = self.__eval_expr(arg)  # result is a Value object
             output = output + get_printable(result)
         super().output(output)
@@ -192,99 +205,10 @@ class Interpreter(InterpreterBase):
             return self.__handle_lambdas(expr_ast)
     
     def __handle_lambdas(self, lambda_ast):
-        lambEnvironment = EnvironmentManager()
-        var = set()
-        if lambda_ast.get('args') is not None:
-            for arg in lambda_ast.get('args'):
-                var.update(self.__extract_variables(arg))
-        
-        statements = lambda_ast.get("statements")
-        if statements is not None:
-            for statement in statements:
-                var.update(self.__extract_variables(statement))
-        print(var)
-        for i in var:
-            print(i)
-            val = self.env.get(i)
-            if val is not None:
-                lambEnvironment.set(i, val)
-
-        print(lambEnvironment.environment)
+        lambEnvironment = copy.deepcopy(self.env)
+        # print(lambEnvironment.environment)
         return Value(Type.LAMBDA, [lambda_ast, lambEnvironment])
     
-    
-    def __extract_variables(self, statement):
-        variable_names = set()
-        #expressions
-        if statement.elem_type in ["int", "string", "bool", "nil"]:
-            return set()
-        
-        if statement.elem_type == "arg":
-            variable_names.update(statement.get('name'))
-
-        elif statement.elem_type in Interpreter.BIN_OPS:
-            if statement.get('op1').elem_type == InterpreterBase.VAR_DEF:
-                variable_names.update(statement.get('op1').get('name'))  
-            else:
-                variable_names.update(self.__extract_variables(statement.get('op1')))
-            if statement.get('op2').elem_type == InterpreterBase.VAR_DEF:
-                variable_names.update(statement.get('op2').get('name'))  
-            else:
-                variable_names.update(self.__extract_variables(statement.get('op2')))
-
-        elif statement.elem_type in ["neg", "!"]:
-            if statement.get('op1').elem_type == InterpreterBase.VAR_DEF:
-                variable_names.update(statement.get('op1').get('name'))  
-            else:
-                variable_names.update(self.__extract_variables(statement.get('op1')))
-                
-        elif statement.elem_type == '=':
-            expression = statement.get('expression')
-            if expression.elem_type == InterpreterBase.VAR_DEF:
-                variable_names.update(expression.get('name'))        
-            else:
-                variable_names.update(self.__extract_variables(expression))
-        
-        elif statement.elem_type == 'fcall':
-            args = statement.get('args')
-            for arg in args:
-                if arg.elem_type == InterpreterBase.VAR_DEF:
-                    variable_names.update(arg.get('name'))
-                else:
-                    variable_names.update(self.__extract_variables(arg))
-
-        elif statement.elem_type == 'if':
-            condition = statement.get('condition')
-            if condition.elem_type == InterpreterBase.VAR_DEF:
-                variable_names.update(condition.get('name'))
-            else:
-                variable_names.update(self.__extract_variables(condition))
-            statements = statement.get('statements')
-            else_statements = statement.get('else_statements')
-            for stmt in statements:
-                variable_names.update(self.__extract_variables(stmt))
-            for stmt in else_statements:
-                variable_names.update(self.__extract_variables(stmt))
-
-        elif statement.elem_type == 'while':
-            condition = statement.get('condition')
-            if condition.elem_type == InterpreterBase.VAR_DEF:
-                variable_names.update(condition.get('name'))
-            else:
-                variable_names.update(self.__extract_variables(condition))
-
-            for stmt in statements:
-                variable_names.update(self.__extract_variables(stmt))
-
-        elif statement.elem_type == 'return':
-            expression = statement.get('expression')
-            if expression is not None:
-                if expression.elem_type == Interpreter.VAR_DEF:
-                    variable_names.update(expression.get('name'))
-                else:
-                    variable_names.update(self.__extract_variables(expression))
-
-        return variable_names
 
     def __eval_op(self, arith_ast):
         left_value_obj = self.__eval_expr(arith_ast.get("op1"))
