@@ -1,26 +1,14 @@
 {
     "tests": [
         {
-            "name": "Correctness | ref",
+            "name": "Correctness | test_func_with_val2",
+            "score": 1,
+            "max_score": 1,
+            "visibility": "visible"
+        },
+        {
+            "name": "Correctness | test_ref3",
             "score": 0,
-            "max_score": 1,
-            "visibility": "visible"
-        },
-        {
-            "name": "Correctness | type_coercion",
-            "score": 1,
-            "max_score": 1,
-            "visibility": "visible"
-        },
-        {
-            "name": "Correctness | first_class_func",
-            "score": 1,
-            "max_score": 1,
-            "visibility": "visible"
-        },
-        {
-            "name": "Correctness | lambdas",
-            "score": 1,
             "max_score": 1,
             "visibility": "visible"
         },
@@ -31,13 +19,19 @@
             "visibility": "visible"
         },
         {
-            "name": "Correctness | closures",
+            "name": "Correctness | test_ref2",
             "score": 1,
             "max_score": 1,
             "visibility": "visible"
         },
         {
-            "name": "Incorrectness | bad_var_func",
+            "name": "Correctness | test_lambda_shadow7",
+            "score": 1,
+            "max_score": 1,
+            "visibility": "visible"
+        },
+        {
+            "name": "Incorrectness | bad_ref",
             "score": 1,
             "max_score": 1,
             "visibility": "visible"

@@ -1,0 +1,13 @@
+func foo(ref x) {
+    print(x);
+}
+
+func main() {
+    foo(a);
+}
+
+/*
+*OUT*
+ErrorType.NAME_ERROR
+*OUT*
+*/

@@ -11,6 +11,34 @@ class EnvironmentManager:
                 return env[symbol]
 
         return None
+    
+    def get_ref(self, symbol, save_env = None, it = 0):
+        for env in list(reversed(self.environment))[1+it:]:
+            if symbol in env:
+                return env[symbol]
+
+        if save_env:
+            for env in reversed(save_env.environment):
+                if symbol in env:
+                    return env[symbol]
+        return
+
+
+    def set_ref(self, symbol, value, save_env = None):
+        for env in list(reversed(self.environment))[1:]:
+            if symbol in env:
+                if isinstance(env[symbol], list):
+                    val = env[symbol]
+                    self.set_ref(val[1], value)
+                else:
+                    env[symbol] = value
+
+        if save_env:
+            for env in reversed(save_env.environment):
+                if symbol in env:
+                    return env[symbol]
+
+
 
     def set(self, symbol, value):
         for env in reversed(self.environment):

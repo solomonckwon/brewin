@@ -2,7 +2,7 @@ func main() {
   x = 0;
   lam1 = lambda(ref x) { x = x + 1; print(x); };
   lam2 = lambda(x) { x = x + 1; print(x); };
-  lam1(1);
+  lam1(x);
   lam2(1);
   print(x);
 }

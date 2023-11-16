@@ -31,6 +31,7 @@ class Interpreter(InterpreterBase):
         ast = parse_program(program)
         self.__set_up_function_table(ast)
         self.env = EnvironmentManager()
+        self.save_env = None
         main_func = self.__get_func_by_name("main", 0)
         self.__run_statements(main_func.get("statements"))
 
@@ -47,10 +48,6 @@ class Interpreter(InterpreterBase):
         # check to see if name is set as lambda in env
         if name not in self.func_name_to_ast:
             func = self.env.get(name)
-            if isinstance(func, str):
-                if func[:5] == "!ref!":
-                    name = func[5:]
-                    func = self.env.get(name)
             if func == None:
                 super().error(ErrorType.NAME_ERROR, f"Function {func} not found")
             if func.type() == Type.FUNC:
@@ -127,19 +124,16 @@ class Interpreter(InterpreterBase):
                 ErrorType.NAME_ERROR,
                 f"Function {func_ast.get('name')} with {len(actual_args)} args not found",
             )
-        # print("before push", self.env.environment)
         self.env.push()
-        # print("before push", self.env.environment)
         if isinstance(lambda_ast, Value) and lambda_ast.type()== Type.LAMBDA:
                 self.save_env = self.env
                 self.env = (lambda_ast.value()[1])
                 # print(self.env.environment)
         for formal_ast, actual_ast in zip(formal_args, actual_args):
             arg_name = formal_ast.get("name")
-            ## check for refarg
             result = copy.deepcopy(self.__eval_expr(actual_ast))
-            if formal_ast.elem_type == 'refarg' and actual_ast.elem_type == 'var':
-                self.env.create(arg_name, "!ref!" + actual_ast.get('name'))
+            if formal_ast.elem_type == "refarg" and actual_ast.elem_type == 'var':
+                self.env.create(arg_name, [Value("refvar", result), actual_ast.get('name')])
             else:
                 self.env.create(arg_name, result)
             
@@ -147,7 +141,7 @@ class Interpreter(InterpreterBase):
         if isinstance(lambda_ast, Value) and lambda_ast.type()== Type.LAMBDA:
                 ## save the prior environment before lambda exits
                 self.env = self.save_env
-                del self.save_env
+                # self.save_env = None
         self.env.pop()
         return return_val
 
@@ -177,25 +171,48 @@ class Interpreter(InterpreterBase):
 
     def __assign(self, assign_ast):
         var_name = assign_ast.get("name")
+        val = self.env.get(var_name)
+        # print("assign expr", assign_ast.get("expression"))
         value_obj = self.__eval_expr(assign_ast.get("expression"))
-        self.env.set(var_name, value_obj)
+        # val is none when it doesn't exist in our current env,
+        # and it needs to be set in current env
+        if val is not None:
+            # if refarg, .get will return a list [Value, refvar name]
+            if isinstance(val, list):
+                if val[0].type() == "refvar":
+                    self.env.set_ref(val[1], value_obj, self.save_env)
+                       
+            else:
+                self.env.set(var_name, value_obj)
+
+        else:
+            self.env.set(var_name, value_obj)
 
     def __eval_expr(self, expr_ast):
-        # print("here expr")
-        # print("type: " + str(expr_ast.elem_type))
+        if isinstance(expr_ast, list):
+            # if expr_ast.type() 
+            var_name = expr_ast[1]
+            value = self.env.get_ref(var_name, self.save_env, 1)
+            # print("from eval: ", value)
+            if isinstance(value, list):
+                return self.__eval_expr(value)
+            if value == None:
+                super().error(ErrorType.NAME_ERROR, f"Variable {var_name} not found")
+            return value
         if expr_ast.elem_type == InterpreterBase.NIL_DEF:
-            # print("getting as nil")
             return Interpreter.NIL_VALUE
         if expr_ast.elem_type == InterpreterBase.INT_DEF:
             return Value(Type.INT, expr_ast.get("val"))
         if expr_ast.elem_type == InterpreterBase.STRING_DEF:
-            # print("getting as str")
             return Value(Type.STRING, expr_ast.get("val"))
         if expr_ast.elem_type == InterpreterBase.BOOL_DEF:
             return Value(Type.BOOL, expr_ast.get("val"))
         if expr_ast.elem_type == InterpreterBase.VAR_DEF:
             var_name = expr_ast.get("name")
             val = self.env.get(var_name)
+            # will return a list if refarg
+            if isinstance(val, list):
+                return self.__eval_expr(val)
             if val is None:
                 val = self.__get_func_by_name(var_name, -1)
                 if val.elem_type != InterpreterBase.FUNC_DEF and val.elem_type != InterpreterBase.LAMBDA_DEF:
