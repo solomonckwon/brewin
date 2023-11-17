@@ -1,15 +1,24 @@
 func main() {
   x = 5;
-  y = lambda(ref x) { x = x + 3; print(x); };
+  y = lambda(ref y) { y = y + 3; print(x); };
+  z = lambda(ref y) { y = y + 3; print(x); };
   y(x);
-  y(10);
+  y(x);
+  z(x);
+  z(x);
   print(x);
+  print(y == z);
 }
 
 /*
 *OUT*
-8
-13
-8
+5
+5
+5
+5
+17
+false
 *OUT*
 */
+
+/* maybe if two lambdas have a refarg to retrieve */

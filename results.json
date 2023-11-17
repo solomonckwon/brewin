@@ -1,8 +1,8 @@
 {
     "tests": [
         {
-            "name": "Correctness | test_func_comp1",
-            "score": 1,
+            "name": "Correctness | test_func_comp2",
+            "score": 0,
             "max_score": 1,
             "visibility": "visible"
         }

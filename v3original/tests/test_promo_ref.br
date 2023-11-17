@@ -1,0 +1,28 @@
+func foo (ref x) {
+    return lambda () { x = x + 1; print(x); };
+}
+
+func main() {
+    print(true == 5);
+    print(5 == true);
+    print(false == 0);
+    print(0 == false);
+
+    print(false == 5);
+    print(5 == false);
+    print(true == 0);
+    print(0 == true);
+}
+
+/*
+*OUT*
+true
+true
+true
+true
+false
+false
+false
+false
+*OUT*
+*/

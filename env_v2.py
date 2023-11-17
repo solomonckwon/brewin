@@ -13,7 +13,7 @@ class EnvironmentManager:
         return None
     
     def get_ref(self, symbol, save_env = None, it = 0):
-        for env in list(reversed(self.environment))[1+it:]:
+        for env in list(reversed(self.environment))[(1+it):]:
             if symbol in env:
                 return env[symbol]
 
@@ -25,8 +25,9 @@ class EnvironmentManager:
 
 
     def set_ref(self, symbol, value, save_env = None, it = 0):
-        if it > 5:
-            return
+
+        # save_env only passed when its a lambda
+        
         for env in list(reversed(self.environment))[1+it:]:
             if symbol in env:
                 if isinstance(env[symbol], list):
@@ -35,11 +36,13 @@ class EnvironmentManager:
                         self.set_ref(val[1], value, save_env, it + 1)
                 else:
                     env[symbol] = value
+                    return
 
         if save_env:
             for env in reversed(save_env.environment):
                 if symbol in env:
                     env[symbol] = value
+                    return
 
 
 

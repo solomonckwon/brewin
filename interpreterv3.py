@@ -48,6 +48,8 @@ class Interpreter(InterpreterBase):
         # check to see if name is set as lambda in env
         if name not in self.func_name_to_ast:
             func = self.env.get(name)
+            if isinstance(func, list):
+                func = self.env.get_ref(func[1], self.save_env)
             if func == None:
                 super().error(ErrorType.NAME_ERROR, f"Function {func} not found")
             if func.type() == Type.FUNC:
@@ -79,7 +81,7 @@ class Interpreter(InterpreterBase):
     def __run_statements(self, statements):
         self.env.push()
         for statement in statements:
-            # print(statement)
+            print(statement)
             if self.trace_output:
                 print(statement)
             status = ExecStatus.CONTINUE
@@ -132,6 +134,7 @@ class Interpreter(InterpreterBase):
         for formal_ast, actual_ast in zip(formal_args, actual_args):
             arg_name = formal_ast.get("name")
             result = copy.deepcopy(self.__eval_expr(actual_ast))
+            # print(result)
             if formal_ast.elem_type == "refarg" and actual_ast.elem_type == 'var':
                 self.env.create(arg_name, [Value("refvar", result), actual_ast.get('name')])
             else:
@@ -180,7 +183,6 @@ class Interpreter(InterpreterBase):
             # if refarg, .get will return a list [Value, refvar name]
             if isinstance(val, list):
                 if val[0].type() == "refvar":
-                    print(val)
                     self.env.set_ref(val[1], value_obj, self.save_env)
                        
             else:
@@ -189,15 +191,14 @@ class Interpreter(InterpreterBase):
         else:
             self.env.set(var_name, value_obj)
 
-    def __eval_expr(self, expr_ast):
+    def __eval_expr(self, expr_ast, it = 0):
         if isinstance(expr_ast, list):
             # if expr_ast.type() 
             var_name = expr_ast[1]
-            value = self.env.get_ref(var_name, self.save_env, 1)
+            value = self.env.get_ref(var_name, self.save_env, 1+it)
             # print("from eval: ", value)
             if isinstance(value, list):
-                print(value)
-                return self.__eval_expr(value)
+                return self.__eval_expr(value, it+1)
             if value == None:
                 super().error(ErrorType.NAME_ERROR, f"Variable {var_name} not found")
             return value
@@ -237,13 +238,13 @@ class Interpreter(InterpreterBase):
     
     def __handle_lambdas(self, lambda_ast):
         lambEnvironment = copy.deepcopy(self.env)
-        # print(lambEnvironment.environment)
         return Value(Type.LAMBDA, [lambda_ast, lambEnvironment])
     
 
     def __eval_op(self, arith_ast):
         left_value_obj = self.__eval_expr(arith_ast.get("op1"))
         right_value_obj = self.__eval_expr(arith_ast.get("op2"))
+        print("\nleft", left_value_obj.type(), "right", right_value_obj.type())
         if not self.__compatible_types(
             arith_ast.elem_type, left_value_obj, right_value_obj
         ):
@@ -251,12 +252,13 @@ class Interpreter(InterpreterBase):
                 ErrorType.TYPE_ERROR,
                 f"Incompatible types for {arith_ast.elem_type} operation",
             )
-        
         if right_value_obj.type() == Type.NIL:
             op_type = right_value_obj.type()
         else:
             op_type = left_value_obj.type()
-
+        if arith_ast.elem_type in ["==", "!="]:
+            if (left_value_obj.type() == Type.BOOL and right_value_obj.type() == Type.INT) or (left_value_obj.type() == Type.INT and right_value_obj.type() == Type.BOOL):
+                op_type = Type.BOOL
         if arith_ast.elem_type not in self.op_to_lambda[op_type]:
             super().error(
                 ErrorType.TYPE_ERROR,
@@ -274,10 +276,7 @@ class Interpreter(InterpreterBase):
         if oper not in ["==", "!="]:
             if obj1.type() == Type.LAMBDA or obj2 == Type.LAMBDA or obj1.type() == Type.FUNC or obj2 == Type.FUNC:
                 return False
-        if oper in ["||", "&&"]:
-            if (obj1.type() == Type.BOOL and obj2.type() == Type.INT) or (obj1.type() == Type.INT and obj2.type() == Type.BOOL):
-                return True
-        if oper in ["+", "-", "*", "/"]:
+        if oper in Interpreter.BIN_OPS:
             if (obj1.type() == Type.BOOL and obj2.type() == Type.INT) or (obj1.type() == Type.INT and obj2.type() == Type.BOOL):
                 return True
         return obj1.type() == obj2.type()
@@ -309,23 +308,24 @@ class Interpreter(InterpreterBase):
         self.op_to_lambda[Type.INT]["/"] = lambda x, y: Value(
             x.type(), int(x.value()) // int(y.value())
         )
+        # fails when 3 == 5
         self.op_to_lambda[Type.INT]["=="] = lambda x, y: Value(
-            Type.BOOL, (x.type() == y.type() or y.type() == Type.BOOL) and bool(x.value()) == bool(y.value())
+            Type.BOOL, (x.type() == y.type()) and x.value() == y.value()
         )
         self.op_to_lambda[Type.INT]["!="] = lambda x, y: Value(
-            Type.BOOL, (x.type() != y.type() and y.type() != Type.BOOL) or bool(x.value()) != bool(y.value())
+            Type.BOOL, (x.type() != y.type()) or x.value() != y.value()
         )
         self.op_to_lambda[Type.INT]["<"] = lambda x, y: Value(
-            Type.BOOL, x.value() < y.value()
+            Type.BOOL, int(x.value()) < int(y.value())
         )
         self.op_to_lambda[Type.INT]["<="] = lambda x, y: Value(
-            Type.BOOL, x.value() <= y.value()
+            Type.BOOL, int(x.value()) <= int(y.value())
         )
         self.op_to_lambda[Type.INT][">"] = lambda x, y: Value(
-            Type.BOOL, x.value() > y.value()
+            Type.BOOL, int(x.value()) > int(y.value())
         )
         self.op_to_lambda[Type.INT][">="] = lambda x, y: Value(
-            Type.BOOL, x.value() >= y.value()
+            Type.BOOL, int(x.value()) >= int(y.value())
         )
         self.op_to_lambda[Type.INT]["&&"] = lambda x, y: Value(
             Type.BOOL, bool(x.value() and y.value())
@@ -347,16 +347,16 @@ class Interpreter(InterpreterBase):
         #  set up operations on bools
         self.op_to_lambda[Type.BOOL] = {}
         self.op_to_lambda[Type.BOOL]["&&"] = lambda x, y: Value(
-            x.type(), x.value() and y.value()
+            x.type(), bool(x.value()) and bool(y.value())
         )
         self.op_to_lambda[Type.BOOL]["||"] = lambda x, y: Value(
-            x.type(), x.value() or y.value()
+            x.type(), bool(x.value()) or bool(y.value())
         )
         self.op_to_lambda[Type.BOOL]["=="] = lambda x, y: Value(
-            Type.BOOL, (x.type() == y.type() or y.type() == Type.INT) and bool(x.value()) == bool(y.value())
+            Type.BOOL, bool(x.value()) == bool(y.value())
         )
         self.op_to_lambda[Type.BOOL]["!="] = lambda x, y: Value(
-            Type.BOOL, (x.type() != y.type() and y.type() != Type.BOOL) or bool(x.value()) != bool(y.value())
+            Type.BOOL, bool(x.value()) != bool(y.value())
         )
         self.op_to_lambda[Type.BOOL]["+"] = lambda x, y: Value(
             Type.INT, int(x.value()) + int(y.value())
@@ -370,6 +370,18 @@ class Interpreter(InterpreterBase):
         self.op_to_lambda[Type.BOOL]["/"] = lambda x, y: Value(
             Type.INT, int(x.value()) // int(y.value())
         )
+        self.op_to_lambda[Type.BOOL][">"] = lambda x, y: Value(
+            Type.BOOL, bool(int(x.value()) > int(y.value()))
+        )
+        self.op_to_lambda[Type.BOOL][">="] = lambda x, y: Value(
+            Type.BOOL, bool(int(x.value()) >= int(y.value()))
+        )
+        self.op_to_lambda[Type.BOOL]["<"] = lambda x, y: Value(
+            Type.BOOL, bool(int(x.value()) < int(y.value()))
+        )
+        self.op_to_lambda[Type.BOOL]["<="] = lambda x, y: Value(
+            Type.BOOL, bool(int(x.value()) <= int(y.value()))
+        )
         #  set up operations on nil
         self.op_to_lambda[Type.NIL] = {}
         self.op_to_lambda[Type.NIL]["=="] = lambda x, y: Value(
@@ -381,21 +393,19 @@ class Interpreter(InterpreterBase):
         # set up operations on functions
         self.op_to_lambda[Type.FUNC] = {}
         self.op_to_lambda[Type.FUNC]["=="] = lambda x, y: Value(
-            Type.BOOL, x.value().get("name") == y.value().get("name") and len(x.value().get("args")) == len(y.value().get("args"))
+            Type.BOOL, id(x) == id(y)
         ) if x.type() == y.type() else Value(Type.BOOL, False)
         self.op_to_lambda[Type.FUNC]["!="] = lambda x, y: Value(
-            Type.BOOL, x.value().get("name") != y.value().get("name") or len(x.value().get("args")) != len(y.value().get("args"))
+            Type.BOOL, id(x) != id(y)
         ) if x.type() == y.type() else Value(Type.BOOL, True)
         # set up operation on lambdas
         self.op_to_lambda[Type.LAMBDA] = {}
         self.op_to_lambda[Type.LAMBDA]["=="] = lambda x, y: Value(
-            Type.BOOL, (x.value()[0]).get("name") == (y.value()[0]).get("name") and 
-            len((x.value()[0]).get("args")) == len((y.value()[0]).get("args"))
+            Type.BOOL, id(x) == id(y)
         ) if x.type() == y.type() else Value(Type.BOOL, False)
         self.op_to_lambda[Type.LAMBDA]["!="] = lambda x, y: Value(
-            Type.BOOL, (x.value()[0]).get("name") != (y.value()[0]).get("name") or len((x.value()[0]).get("args")) != len((y.value()[0]).get("args"))
+            Type.BOOL, id(x) != id(y)
         ) if x.type() == y.type() else Value(Type.BOOL, True)
-        # NEED TO FIX THIS ?
         # Note that a copy of a closure or function (e.g., one returned by a function, 
         # since functions return deep copies) is NOT the same as the original closure/function, 
         # so comparison using == would be false, and != would be true:
@@ -404,7 +414,7 @@ class Interpreter(InterpreterBase):
         cond_ast = if_ast.get("condition")
         result = self.__eval_expr(cond_ast)
         if result.type() == Type.INT:
-            result = Value(Type.BOOL, result.value())
+            result = Value(Type.BOOL, bool(result.value()))
         if result.type() != Type.BOOL:
             super().error(
                 ErrorType.TYPE_ERROR,
@@ -428,7 +438,7 @@ class Interpreter(InterpreterBase):
         while run_while.value():
             run_while = self.__eval_expr(cond_ast)
             if run_while.type() == Type.INT:
-                run_while = Value(Type.BOOL, run_while.value())
+                run_while = Value(Type.BOOL, bool(run_while.value()))
             if run_while.type() != Type.BOOL:
                 super().error(
                     ErrorType.TYPE_ERROR,
@@ -443,6 +453,7 @@ class Interpreter(InterpreterBase):
         return (ExecStatus.CONTINUE, Interpreter.NIL_VALUE)
 
     def __do_return(self, return_ast):
+        # print("do return:! ", return_ast)
         expr_ast = return_ast.get("expression")
         if expr_ast is None:
             return (ExecStatus.RETURN, Interpreter.NIL_VALUE)
