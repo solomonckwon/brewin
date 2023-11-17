@@ -180,6 +180,7 @@ class Interpreter(InterpreterBase):
             # if refarg, .get will return a list [Value, refvar name]
             if isinstance(val, list):
                 if val[0].type() == "refvar":
+                    print(val)
                     self.env.set_ref(val[1], value_obj, self.save_env)
                        
             else:
@@ -195,6 +196,7 @@ class Interpreter(InterpreterBase):
             value = self.env.get_ref(var_name, self.save_env, 1)
             # print("from eval: ", value)
             if isinstance(value, list):
+                print(value)
                 return self.__eval_expr(value)
             if value == None:
                 super().error(ErrorType.NAME_ERROR, f"Variable {var_name} not found")

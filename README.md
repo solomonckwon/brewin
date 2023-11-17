@@ -1,13 +1,16 @@
-# Working on
+# Project 3
 
-1. Returning functions
-2. Passing functions as arguments (?)
+Currently working on passing test cases. 
 
-# Done
+    Correctness | test_func_comp4 (0/1)
+    Correctness | test_func_ref_with_lambda1 (0/1)
+    Correctness | test_lambda_comp1 (0/1)
+    Correctness | test_lambda_with_ref1 (0/1)
+    Correctness | test_lambda_with_ref2 (0/1)
+    Correctness | test_multiscoped_var_lambda (0/1)
+    Correctness | test_promo3 (0/1)
+    Correctness | test_ref3 (0/1)
+    Correctness | test_ref4 (0/1)
+        Check for when ref var has same name?
+    Correctness | test_shadow_lambda6 (0/1)
 
-1. Type coercion
-2. Lambdas
-3. Comparing Functions (except closures)
-4. Calling functions through variables holding a function
-5. closures
-6. Parameter passing by reference

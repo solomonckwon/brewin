@@ -1,37 +1,7 @@
 {
     "tests": [
         {
-            "name": "Correctness | test_func_with_val2",
-            "score": 1,
-            "max_score": 1,
-            "visibility": "visible"
-        },
-        {
-            "name": "Correctness | test_ref3",
-            "score": 0,
-            "max_score": 1,
-            "visibility": "visible"
-        },
-        {
-            "name": "Correctness | test_promo1",
-            "score": 1,
-            "max_score": 1,
-            "visibility": "visible"
-        },
-        {
-            "name": "Correctness | test_ref2",
-            "score": 1,
-            "max_score": 1,
-            "visibility": "visible"
-        },
-        {
-            "name": "Correctness | test_lambda_shadow7",
-            "score": 1,
-            "max_score": 1,
-            "visibility": "visible"
-        },
-        {
-            "name": "Incorrectness | bad_ref",
+            "name": "Correctness | test_func_comp1",
             "score": 1,
             "max_score": 1,
             "visibility": "visible"
