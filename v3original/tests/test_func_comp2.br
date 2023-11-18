@@ -1,0 +1,31 @@
+
+func main() {
+    a = lambda() { print("original"); };
+    /* saves environment where a prints original */
+
+
+    x = lambda (ref f) {
+      f = lambda() { print("modified"); };
+      a();
+      f();
+      /* this still prints original, despite assignment */
+
+      print(f == a);
+    };
+    /* saves environment where x a prints original */
+    
+    x(a);
+    a();
+}
+
+/*
+*OUT*
+original
+modified
+true
+*OUT*
+*/
+
+/* major changes may be required... we want the refarg to set the save_env,
+but if refarg is called, we want it to call the self.env */
+/* on line 12, the main function environment was not changed */

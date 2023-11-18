@@ -1,27 +1,25 @@
 
 func main() {
-  a = 5;
+  a = foo(1);
   foo();
-  foo(10);
-  foo(20,30);
 }
 
 func foo() {
   print(a);
 }
 
-func foo(a) {
-  print(a);
+func foo(ref a) {
+  a = a + 1;
 }
 
-func foo(a,b) {
+func foo(ref a,ref b) {
   print(a," ",b);
 }
 
 /*
 *OUT*
 5
-10
+6
 20 30
 *OUT*
 */

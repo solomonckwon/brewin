@@ -1,5 +1,6 @@
 from enum import Enum
 from intbase import InterpreterBase
+import copy
 
 
 # Enumerated type for our different language data types
@@ -17,6 +18,18 @@ class Value:
     def __init__(self, type, value=None):
         self.t = type
         self.v = value
+
+    def __str__(self):
+        return f"Value(type={self.t}, value={self.v})"
+
+
+    def deepcopy(self):
+        type = self.t
+        val = self.v
+        # print("og id", id(self))
+        # print("new id", id(Value(type, copy.deepcopy(val))))
+        return Value(type, copy.deepcopy(val))
+
 
     def value(self):
         return self.v

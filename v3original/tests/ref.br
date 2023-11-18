@@ -1,11 +1,9 @@
 func main() {
   x = 0;
-  lam1 = lambda(ref x) { x = x + 1; print(x); };
-  lam2 = lambda(ref x) { x = x + 1; print(x); };
+  lam1 = lambda(ref x) { x = x + 1; print(x); }; 
+  lam2 = lambda(x) { x = x + 1; print(x); };
   lam1(x);
   lam2(x);
-  lam3 = lam2(x);
-  lam3();
   print(x);
 }
 
@@ -13,6 +11,8 @@ func main() {
 *OUT*
 1
 2
-2
+1
 *OUT*
 */
+
+/* test_ref3 after this */

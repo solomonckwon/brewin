@@ -48,8 +48,9 @@ class Interpreter(InterpreterBase):
         # check to see if name is set as lambda in env
         if name not in self.func_name_to_ast:
             func = self.env.get(name)
+            #ref arg will be list
             if isinstance(func, list):
-                func = self.env.get_ref(func[1], self.save_env)
+                func = self.env.get_ref(func[1], name, self.save_env)
             if func == None:
                 super().error(ErrorType.NAME_ERROR, f"Function {func} not found")
             if func.type() == Type.FUNC:
@@ -80,10 +81,9 @@ class Interpreter(InterpreterBase):
 
     def __run_statements(self, statements):
         self.env.push()
+        print()
         for statement in statements:
             print(statement)
-            if self.trace_output:
-                print(statement)
             status = ExecStatus.CONTINUE
             if statement.elem_type == InterpreterBase.FCALL_DEF:
                 self.__call_func(statement)
@@ -97,10 +97,10 @@ class Interpreter(InterpreterBase):
                 status, return_val = self.__do_while(statement)
 
             if status == ExecStatus.RETURN:
-                self.env.pop()
+                # self.env.pop()
                 return (status, return_val)
 
-        self.env.pop()
+        # self.env.pop()
         return (ExecStatus.CONTINUE, Interpreter.NIL_VALUE)
 
     def __call_func(self, call_node):
@@ -117,7 +117,9 @@ class Interpreter(InterpreterBase):
         lambda_ast = func_ast
         if isinstance(func_ast, Value):
             if func_ast.type()== Type.LAMBDA:
+                # get args from lambda_ast
                 formal_args = (func_ast.value()[0]).get("args")
+            # get lambda_ast
             func_ast = func_ast.value()[0]
         else:
             formal_args = func_ast.get("args")
@@ -126,25 +128,42 @@ class Interpreter(InterpreterBase):
                 ErrorType.NAME_ERROR,
                 f"Function {func_ast.get('name')} with {len(actual_args)} args not found",
             )
+        # when should i create new?
         self.env.push()
+        ref_vars = {}
         if isinstance(lambda_ast, Value) and lambda_ast.type()== Type.LAMBDA:
+                # check to see if any prior lambdas changed shadowed vars
+                if self.save_env != None:
+                    
+                    ref_vars = self.save_env.get_ref_var(self.save_env)
+                    print("REF_VARS", ref_vars)
                 self.save_env = self.env
+                #sets the current environment as lamb env
                 self.env = (lambda_ast.value()[1])
+                self.env.push()
+                # print("DURING LAMBDA FUNC CALL")
+                # print(self.save_env.environment)
                 # print(self.env.environment)
+
         for formal_ast, actual_ast in zip(formal_args, actual_args):
             arg_name = formal_ast.get("name")
-            result = copy.deepcopy(self.__eval_expr(actual_ast))
+            if arg_name in ref_vars.keys():
+                result = copy.deepcopy(ref_vars[arg_name])
+            else:
+                result = copy.deepcopy(self.__eval_expr(actual_ast))
             # print(result)
             if formal_ast.elem_type == "refarg" and actual_ast.elem_type == 'var':
                 self.env.create(arg_name, [Value("refvar", result), actual_ast.get('name')])
             else:
                 self.env.create(arg_name, result)
-            
+        
         _, return_val = self.__run_statements(func_ast.get("statements"))
         if isinstance(lambda_ast, Value) and lambda_ast.type()== Type.LAMBDA:
                 ## save the prior environment before lambda exits
+                # self.env.pop()
+                temp = self.env
                 self.env = self.save_env
-                # self.save_env = None
+                self.save_env = temp
         self.env.pop()
         return return_val
 
@@ -174,33 +193,52 @@ class Interpreter(InterpreterBase):
 
     def __assign(self, assign_ast):
         var_name = assign_ast.get("name")
-        val = self.env.get(var_name)
-        # print("assign expr", assign_ast.get("expression"))
-        value_obj = self.__eval_expr(assign_ast.get("expression"))
+        val = self.env.get(var_name, self.save_env)
+        value_obj = self.__eval_expr(assign_ast.get("expression"), 0, var_name)
+        # print("WHAT IS VALUE OBJ", value_obj.type(), value_obj.value())
         # val is none when it doesn't exist in our current env,
         # and it needs to be set in current env
+        # print("FROM ASSIGN var_name", var_name)
+        # print("FROM ASSIGN", val)
+        if value_obj.type() == Type.FUNC:
+            
+            for env in self.env.environment:
+                for key, value in env.items():
+                    if value == value_obj.value():
+                        value_obj = env[key]
         if val is not None:
-            # if refarg, .get will return a list [Value, refvar name]
-            if isinstance(val, list):
-                if val[0].type() == "refvar":
-                    self.env.set_ref(val[1], value_obj, self.save_env)
-                       
-            else:
+            # if refarg, self.env.get will return a list [Value, refvar name]
+            if not isinstance(val, list):
                 self.env.set(var_name, value_obj)
+            elif isinstance(val, list):
+                if val[0].type() == "refvar":
+                    # print("BEFORE AFTER SET REF IN ASSIGN")
+                    # print(self.env.environment)
+                    # print(self.save_env.environment)
+                    self.env.set_ref(val[1], value_obj, var_name, self.save_env)
+                    # print(self.env.environment)
+                    # print(self.save_env.environment)
+                    # NEED TO FIGURE OUT THIS LOGIC BECAUSE ITS AN ISSUE IN LAMBDAS
+                    # ISSUE
+                    # different order for when ur in the lambda env vs main env...
 
         else:
             self.env.set(var_name, value_obj)
 
-    def __eval_expr(self, expr_ast, it = 0):
+    def __eval_expr(self, expr_ast, it = 0, var_name = None):
         if isinstance(expr_ast, list):
             # if expr_ast.type() 
             var_name = expr_ast[1]
-            value = self.env.get_ref(var_name, self.save_env, 1+it)
-            # print("from eval: ", value)
+            value = self.env.get_ref(var_name, var_name, self.save_env)
+            # print("from eval: ", value, var_name) 
             if isinstance(value, list):
-                return self.__eval_expr(value, it+1)
+                return self.__eval_expr(value)
+            # print("FROM EVAL", value)
             if value == None:
-                super().error(ErrorType.NAME_ERROR, f"Variable {var_name} not found")
+                if self.env.get(var_name) == None:
+                    super().error(ErrorType.NAME_ERROR, f"Variable {var_name} not found")
+                else:
+                    return self.__eval_expr(self.env.get(var_name))
             return value
         if expr_ast.elem_type == InterpreterBase.NIL_DEF:
             return Interpreter.NIL_VALUE
@@ -234,17 +272,22 @@ class Interpreter(InterpreterBase):
         if expr_ast.elem_type == Interpreter.NOT_DEF:
             return self.__eval_unary(expr_ast, Type.BOOL, lambda x: not x)
         if expr_ast.elem_type == InterpreterBase.LAMBDA_DEF:
-            return self.__handle_lambdas(expr_ast)
+            return self.__handle_lambdas(expr_ast, var_name)
     
-    def __handle_lambdas(self, lambda_ast):
-        lambEnvironment = copy.deepcopy(self.env)
+    def __handle_lambdas(self, lambda_ast, var_name):
+        # I copy the env before setting lambda in it
+        lambEnvironment = self.env.deepcopy()
+        # print("HANDLE LAMBDAS")
+        # print(lambEnvironment.environment)
+        # print(self.env.environment)
+        lambEnvironment.set(var_name, Value(Type.LAMBDA, [lambda_ast, lambEnvironment.deepcopy()]))
         return Value(Type.LAMBDA, [lambda_ast, lambEnvironment])
     
 
     def __eval_op(self, arith_ast):
         left_value_obj = self.__eval_expr(arith_ast.get("op1"))
         right_value_obj = self.__eval_expr(arith_ast.get("op2"))
-        print("\nleft", left_value_obj.type(), "right", right_value_obj.type())
+        # print("\nleft", left_value_obj.type(), "right", right_value_obj.type())
         if not self.__compatible_types(
             arith_ast.elem_type, left_value_obj, right_value_obj
         ):
@@ -393,10 +436,10 @@ class Interpreter(InterpreterBase):
         # set up operations on functions
         self.op_to_lambda[Type.FUNC] = {}
         self.op_to_lambda[Type.FUNC]["=="] = lambda x, y: Value(
-            Type.BOOL, id(x) == id(y)
+            Type.BOOL, id(x.value()) == id(y.value())
         ) if x.type() == y.type() else Value(Type.BOOL, False)
         self.op_to_lambda[Type.FUNC]["!="] = lambda x, y: Value(
-            Type.BOOL, id(x) != id(y)
+            Type.BOOL, id(x.value()) != id(y.value())
         ) if x.type() == y.type() else Value(Type.BOOL, True)
         # set up operation on lambdas
         self.op_to_lambda[Type.LAMBDA] = {}

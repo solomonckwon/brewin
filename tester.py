@@ -165,7 +165,8 @@ async def main():
     """main entrypoint: argparses, delegates to test scaffold, suite generator, gradescope output"""
     if not sys.argv:
         raise ValueError("Error: Missing version number argument")
-    version = sys.argv[1]
+    # version = sys.argv[1]
+    version = "3"
     module_name = f"interpreterv{version}"
     interpreter = importlib.import_module(module_name)
 

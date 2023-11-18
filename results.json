@@ -1,8 +1,14 @@
 {
     "tests": [
         {
-            "name": "Correctness | test_func_comp2",
+            "name": "Correctness | test_overload",
             "score": 0,
+            "max_score": 1,
+            "visibility": "visible"
+        },
+        {
+            "name": "Correctness | test_func_comp1",
+            "score": 1,
             "max_score": 1,
             "visibility": "visible"
         }
