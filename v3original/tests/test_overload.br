@@ -1,0 +1,25 @@
+
+func main() {
+  a = 0;
+  foo(a);
+  foo(a, a);
+  print(a);
+}
+
+func foo() {
+  print(a);
+}
+
+func foo(ref a) {
+  a = a + 1;
+}
+
+func foo(ref a,ref b) {
+  a = a + b;
+}
+
+/*
+*OUT*
+2
+*OUT*
+*/

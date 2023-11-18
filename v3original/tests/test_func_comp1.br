@@ -1,0 +1,14 @@
+func foo() {
+  print();
+}
+func main() {
+  a = foo;
+  b = foo;
+  print(a==b);
+}
+
+/*
+*OUT*
+true
+*OUT*
+*/
