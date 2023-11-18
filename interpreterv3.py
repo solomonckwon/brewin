@@ -171,12 +171,20 @@ class Interpreter(InterpreterBase):
                 ErrorType.TYPE_ERROR,
                 f"Incompatible types for {arith_ast.elem_type} operation",
             )
-        if arith_ast.elem_type not in self.op_to_lambda[left_value_obj.type()]:
+
+        obj_type = left_value_obj.type()
+        # If Type.INT is compared with Type.BOOL, we use the lambda self.op_to_lambda[Type.BOOL]
+        # This way int comparisons still work
+        if left_value_obj.type() == Type.INT and right_value_obj.type() == Type.BOOL:
+            if arith_ast.elem_type in ["==", "!=", "||", "&&"]:
+                obj_type = right_value_obj.type()
+
+        if arith_ast.elem_type not in self.op_to_lambda[obj_type]:
             super().error(
                 ErrorType.TYPE_ERROR,
-                f"Incompatible operator {arith_ast.elem_type} for type {left_value_obj.type()}",
+                f"Incompatible operator {arith_ast.elem_type} for type {obj_type}",
             )
-        f = self.op_to_lambda[left_value_obj.type()][arith_ast.elem_type]
+        f = self.op_to_lambda[obj_type][arith_ast.elem_type]
         # print("here eval")
         # print(arith_ast)
         # print("evaluating " + str(left_value_obj.type()) + " " + str(arith_ast.elem_type))
@@ -187,50 +195,62 @@ class Interpreter(InterpreterBase):
         # DOCUMENT: allow comparisons ==/!= of anything against anything
         if oper in ["==", "!="]:
             return True
+        if oper in self.BIN_OPS:
+            if obj1.type() in [Type.BOOL, Type.INT] and obj2.type() in [Type.BOOL, Type.INT]:
+                return True
         return obj1.type() == obj2.type()
 
-    def __eval_unary(self, arith_ast, t, f):
+    def __eval_unary(self, arith_ast, type, function):
         value_obj = self.__eval_expr(arith_ast.get("op1"))
-        if value_obj.type() != t:
+        if value_obj.type() not in [Type.BOOL, Type.INT]:
             super().error(
                 ErrorType.TYPE_ERROR,
                 f"Incompatible type for {arith_ast.elem_type} operation",
             )
-        return Value(t, f(value_obj.value()))
+        return Value(type, function(value_obj.value()))
 
     def __setup_ops(self):
         self.op_to_lambda = {}
         # set up operations on integers
         self.op_to_lambda[Type.INT] = {}
         self.op_to_lambda[Type.INT]["+"] = lambda x, y: Value(
-            x.type(), x.value() + y.value()
+            x.type(), int(x.value()) + int(y.value())
         )
         self.op_to_lambda[Type.INT]["-"] = lambda x, y: Value(
-            x.type(), x.value() - y.value()
+            x.type(), int(x.value()) - int(y.value())
         )
         self.op_to_lambda[Type.INT]["*"] = lambda x, y: Value(
-            x.type(), x.value() * y.value()
+            x.type(), int(x.value()) * int(y.value())
         )
         self.op_to_lambda[Type.INT]["/"] = lambda x, y: Value(
-            x.type(), x.value() // y.value()
+            x.type(), int(x.value()) // int(y.value())
         )
         self.op_to_lambda[Type.INT]["=="] = lambda x, y: Value(
-            Type.BOOL, x.type() == y.type() and x.value() == y.value()
+            Type.BOOL, x.type() == y.type() and int(x.value()) == int(y.value())
         )
         self.op_to_lambda[Type.INT]["!="] = lambda x, y: Value(
-            Type.BOOL, x.type() != y.type() or x.value() != y.value()
+            Type.BOOL, x.type() != y.type() or int(x.value()) != int(y.value())
         )
         self.op_to_lambda[Type.INT]["<"] = lambda x, y: Value(
-            Type.BOOL, x.value() < y.value()
+            Type.BOOL, int(x.value()) < int(y.value())
         )
         self.op_to_lambda[Type.INT]["<="] = lambda x, y: Value(
-            Type.BOOL, x.value() <= y.value()
+            Type.BOOL, int(x.value()) <= int(y.value())
         )
         self.op_to_lambda[Type.INT][">"] = lambda x, y: Value(
-            Type.BOOL, x.value() > y.value()
+            Type.BOOL, int(x.value()) > int(y.value())
         )
         self.op_to_lambda[Type.INT][">="] = lambda x, y: Value(
-            Type.BOOL, x.value() >= y.value()
+            Type.BOOL, int(x.value()) >= int(y.value())
+        )
+        self.op_to_lambda[Type.INT]["&&"] = lambda x, y: Value(
+            Type.BOOL, bool(x.value() and y.value())
+        )
+        self.op_to_lambda[Type.INT]["||"] = lambda x, y: Value(
+            Type.BOOL, bool(x.value() or y.value())
+        )
+        self.op_to_lambda[Type.INT]["!"] = lambda x, y: Value(
+            Type.BOOL, bool(x.value() or y.value())
         )
         #  set up operations on strings
         self.op_to_lambda[Type.STRING] = {}
@@ -246,16 +266,40 @@ class Interpreter(InterpreterBase):
         #  set up operations on bools
         self.op_to_lambda[Type.BOOL] = {}
         self.op_to_lambda[Type.BOOL]["&&"] = lambda x, y: Value(
-            x.type(), x.value() and y.value()
+            x.type(), bool(x.value()) and bool(y.value())
         )
         self.op_to_lambda[Type.BOOL]["||"] = lambda x, y: Value(
-            x.type(), x.value() or y.value()
+            x.type(), bool(x.value()) or bool(y.value())
         )
         self.op_to_lambda[Type.BOOL]["=="] = lambda x, y: Value(
-            Type.BOOL, x.type() == y.type() and x.value() == y.value()
+            Type.BOOL, bool(x.value()) == bool(y.value())
         )
         self.op_to_lambda[Type.BOOL]["!="] = lambda x, y: Value(
-            Type.BOOL, x.type() != y.type() or x.value() != y.value()
+            Type.BOOL, bool(x.value()) != bool(y.value())
+        )
+        self.op_to_lambda[Type.BOOL]["+"] = lambda x, y: Value(
+            Type.INT, int(x.value()) + int(y.value())
+        )
+        self.op_to_lambda[Type.BOOL]["-"] = lambda x, y: Value(
+            Type.INT, int(x.value()) - int(y.value())
+        )
+        self.op_to_lambda[Type.BOOL]["*"] = lambda x, y: Value(
+            Type.INT, int(x.value()) * int(y.value())
+        )
+        self.op_to_lambda[Type.BOOL]["/"] = lambda x, y: Value(
+            Type.INT, int(x.value()) // int(y.value())
+        )
+        self.op_to_lambda[Type.BOOL][">"] = lambda x, y: Value(
+            Type.BOOL, bool(int(x.value()) > int(y.value()))
+        )
+        self.op_to_lambda[Type.BOOL][">="] = lambda x, y: Value(
+            Type.BOOL, bool(int(x.value()) >= int(y.value()))
+        )
+        self.op_to_lambda[Type.BOOL]["<"] = lambda x, y: Value(
+            Type.BOOL, bool(int(x.value()) < int(y.value()))
+        )
+        self.op_to_lambda[Type.BOOL]["<="] = lambda x, y: Value(
+            Type.BOOL, bool(int(x.value()) <= int(y.value()))
         )
 
         #  set up operations on nil
