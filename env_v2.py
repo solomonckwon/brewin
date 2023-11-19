@@ -83,28 +83,34 @@ class EnvironmentManager:
         else:
             self.lambda_indexes.pop()
 
-            
+    def check_if_ref_var_in_scope(self, var_name):
+        for env in self.environment:
+            if var_name in env:
+                if env[var_name].type() != Type.REFARG:
+                    return True
+        return False
 
     def set_ref(self, var_name, value):
         # if in lambda, ref args must be looking for the referenced variable in the main env
         print(self.environment)
         print(self.temp_environment)
         print("____SET_REF___")
+        ref_var_exists = False
         if self.lambda_call > 0:
-            for env in reversed(self.environment):
+            for env in (reversed(self.environment)):
                 if var_name in env:
                     if env[var_name].type() == Type.REFARG:
                         var_name = env[var_name].value()
-                        break
-                    else:
-                        env[var_name] = value
-
-            for env in reversed(self.temp_environment):
-                if var_name in env:
-                    if env[var_name].type() == Type.REFARG:
-                        var_name = env[var_name].value()
-                    else:
-                        env[var_name] = value
+            
+            if self.check_if_ref_var_in_scope(var_name):
+                for env in reversed(self.temp_environment):
+                    if var_name in env:
+                        if env[var_name].type() == Type.REFARG:
+                            var_name = env[var_name].value()
+                        else:
+                            env[var_name] = value
+            else:
+                self.set(var_name, value)
         else:
             for env in reversed(self.environment):
                 if var_name in env:

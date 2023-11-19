@@ -1,0 +1,18 @@
+func foo(){
+    a = 5;
+    return lambda(ref x) { return lambda() {x=x+a;};};
+}
+
+func main(){
+    top_ref = foo();
+    y = 10;
+    sec_ref = top_ref(y);
+    sec_ref();
+    print(y);   /*should print 10*/
+}
+
+/*
+*OUT*
+10
+*OUT*
+*/
