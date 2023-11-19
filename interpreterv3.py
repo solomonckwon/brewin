@@ -54,10 +54,11 @@ class Interpreter(InterpreterBase):
                 # print(candidate_func)
                 super().error(ErrorType.NAME_ERROR, f"Function {name} not found")
             if candidate_func.type() == Type.REFARG:
-                print(candidate_func)
+                save_this = candidate_func
                 candidate_func = self.env.get_ref(name)
-                # if candidate_func is None:
-                #     if name in self.func_name_to_ast:
+                if candidate_func is None:
+                    if save_this.value() in self.func_name_to_ast:
+                        return self.__get_func_by_name(save_this.value(), num_params)
                         
             if candidate_func.type() == Type.FUNC:
                 if num_params != len(candidate_func.value().get('args')):
