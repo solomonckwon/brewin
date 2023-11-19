@@ -45,16 +45,20 @@ class Interpreter(InterpreterBase):
             self.func_name_to_ast[func_name][num_params] = func_def
 
     def __get_func_by_name(self, name, num_params):
+        print("CAND FUNC", name)
         if name not in self.func_name_to_ast:
             candidate_func = self.env.get(name)
             #check to see if a variable has been assigned to a func
-            # print(self.env.environment)
             # print(self.env.temp_environment)
             if candidate_func is None:
                 # print(candidate_func)
                 super().error(ErrorType.NAME_ERROR, f"Function {name} not found")
             if candidate_func.type() == Type.REFARG:
+                print(candidate_func)
                 candidate_func = self.env.get_ref(name)
+                # if candidate_func is None:
+                #     if name in self.func_name_to_ast:
+                        
             if candidate_func.type() == Type.FUNC:
                 if num_params != len(candidate_func.value().get('args')):
                     super().error(ErrorType.TYPE_ERROR, "Invalid # of args to lambda")
@@ -108,7 +112,7 @@ class Interpreter(InterpreterBase):
         if func_name == "inputs":
             return self.__call_input(call_node)
 
-
+        lambda_ast = None
         actual_args = call_node.get("args")
         func_ast = self.__get_func_by_name(func_name, len(actual_args))
         # lambda functions will be a value, due to __get_func_by_name
@@ -118,6 +122,7 @@ class Interpreter(InterpreterBase):
         # print(self.env.temp_environment)
         if isinstance(func_ast, Value):
             self.env.set_lamb_env(func_ast.value())
+            lambda_ast = func_ast
             func_ast = self.env.get_lamb_ast(func_ast.value())
         formal_args = func_ast.get("args")
         if len(actual_args) != len(formal_args):
@@ -143,7 +148,7 @@ class Interpreter(InterpreterBase):
                 self.env.create(arg_name, result)
         _, return_val = self.__run_statements(func_ast.get("statements"))
         self.env.pop()
-        if (self.env.lambda_call > 0):
+        if (lambda_ast):
             self.env.set_main_env()
 
         return return_val
