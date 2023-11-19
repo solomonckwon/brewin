@@ -1,0 +1,14 @@
+func foo(ref f) {
+    a = f + 1;
+}
+
+func main() {
+    a = foo;
+    foo(a);
+}
+
+/*
+*OUT*
+ErrorType.TYPE_ERROR
+*OUT*
+*/

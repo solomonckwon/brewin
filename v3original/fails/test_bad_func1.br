@@ -1,7 +1,9 @@
-func main() {
-  f = 5;
+func foo(a,b) { print(a,b); }
 
-  f(20); 
+func main() {
+ a = foo;
+ b = foo;
+ print(b > a);
 }
 
 /*

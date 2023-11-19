@@ -1,11 +1,21 @@
 func main() {
-  a = 10;
-  b = lambda(a) { print(a); };
-  b(20);
+  x = 0;
+  a = lambda() { x = x + 1; print(x); };
+  b = a;
+  a(); /* prints 1 */
+  b(); /* prints 2 */
+  a(); /* prints 3 */
+  b(); /* prints 4 */
+  print(a == b);
 }
+
 
 /*
 *OUT*
-20
+1
+2
+3
+4
+true
 *OUT*
 */

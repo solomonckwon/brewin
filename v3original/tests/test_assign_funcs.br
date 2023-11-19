@@ -1,0 +1,15 @@
+func foo() {
+    print(1);
+}
+
+func main() {
+    a = lambda () { print(1); };
+    b = foo;
+    a();
+}
+
+/*
+*OUT*
+1
+*OUT*
+*/

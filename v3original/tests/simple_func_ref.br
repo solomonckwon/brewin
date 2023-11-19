@@ -1,0 +1,15 @@
+
+func main() {
+    a = lambda() { print("original"); };
+    x = lambda (ref f) {
+      f = lambda() { print("modified"); };
+    };
+    x(a);
+    a();
+}
+
+/*
+*OUT*
+modified
+*OUT*
+*/

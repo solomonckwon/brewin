@@ -8,6 +8,9 @@ class Type(Enum):
     BOOL = 2
     STRING = 3
     NIL = 4
+    FUNC = 5
+    LAMBDA = 6
+    REFARG = 7
 
 
 # Represents a value, which has a type and its value
@@ -15,6 +18,9 @@ class Value:
     def __init__(self, type, value=None):
         self.t = type
         self.v = value
+
+    def __str__(self):
+        return f"Value(type={self.t}, value={self.v})"
 
     def value(self):
         return self.v
