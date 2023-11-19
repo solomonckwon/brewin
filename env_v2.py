@@ -2,7 +2,7 @@
 # in a brewin program and the Value object, which stores a type, and a value.
 
 import copy
-from type_valuev2 import Type
+from type_valuev2 import Type, Value
 class EnvironmentManager:
     lambda_call = 0
     lambda_indexes = []
@@ -50,7 +50,7 @@ class EnvironmentManager:
         closure = copy.deepcopy(self.environment)
         self.lambda_environment.append(closure)
         self.lambda_environment.append(lambda_ast)
-        print(lambda_ast)
+        # print(lambda_ast)
         ## return the index of the lambdas closure env
         return (len(self.lambda_environment) - 2)
     
@@ -83,43 +83,37 @@ class EnvironmentManager:
         else:
             self.lambda_indexes.pop()
 
-    def check_if_ref_var_in_scope(self, var_name):
-        for env in self.environment:
-            if var_name in env:
-                if env[var_name].type() != Type.REFARG:
-                    return True
-        return False
+            
 
     def set_ref(self, var_name, value):
         # if in lambda, ref args must be looking for the referenced variable in the main env
         print(self.environment)
         print(self.temp_environment)
         print("____SET_REF___")
-        ref_var_exists = False
         if self.lambda_call > 0:
-            for env in (reversed(self.environment)):
+            for env in reversed(self.environment):
                 if var_name in env:
                     if env[var_name].type() == Type.REFARG:
                         var_name = env[var_name].value()
-            
-            if self.check_if_ref_var_in_scope(var_name):
-                for env in reversed(self.temp_environment):
-                    if var_name in env:
-                        if env[var_name].type() == Type.REFARG:
-                            var_name = env[var_name].value()
-                        else:
-                            env[var_name] = value
-            else:
-                self.set(var_name, value)
+                        break
+                    else:
+                        env[var_name] = value
+
+            for env in reversed(self.temp_environment):
+                if var_name in env:
+                    if env[var_name].type() == Type.REFARG:
+                        var_name = env[var_name].value()
+                    else:
+                        env[var_name] = value
         else:
             for env in reversed(self.environment):
                 if var_name in env:
                     if env[var_name].type() == Type.REFARG:
                         var_name = env[var_name].value()
                     else:
-                        print(env[var_name])
+                        # print(env[var_name])
                         env[var_name] = value
-                        print(env[var_name])
+                        # print(env[var_name])
                     
 
 
@@ -128,9 +122,9 @@ class EnvironmentManager:
         print()
 
     def get_ref(self, var_name):
-        print(self.environment)
-        print(self.temp_environment)
-        print("____GET_REF____")
+        # print(self.environment)
+        # print(self.temp_environment)
+        # print("____GET_REF____")
         return_value = None
         if self.lambda_call > 0:
             for env in reversed(self.environment):
@@ -149,20 +143,23 @@ class EnvironmentManager:
                     else:
                         return_value = env[var_name]
         else:
-            print()
+            # print()
             for env in reversed(self.environment):
-                print(env)
                 if var_name in env:
                     if env[var_name].type() == Type.REFARG:
-                        print(env[var_name])
                         var_name = env[var_name].value()
                     else:
-                        print(env[var_name])
                         return_value = env[var_name]
-            print()
 
-        print(self.environment)
-        print(self.temp_environment)
-        print()
+        # print(self.environment)
+        # print(self.temp_environment)
+        # print(return_value)
+        # print()
         
         return return_value
+    
+    def check_for_ref(self, var_name):
+        for env in reversed(self.environment):
+            for key, val in env.items():
+                if val.value() == var_name:
+                    return key

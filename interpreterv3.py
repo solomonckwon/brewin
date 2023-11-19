@@ -130,9 +130,16 @@ class Interpreter(InterpreterBase):
             arg_name = formal_ast.get("name")
             # If it's a reference arg and the result is a var:
             if formal_ast.elem_type == 'refarg' and actual_ast.elem_type == InterpreterBase.VAR_DEF:
+                # self.env.check_and_set(actual_ast.get('name'), arg_name)
                 self.env.create(arg_name, Value(Type.REFARG, actual_ast.get('name')))
+                print("CALL FUNC ENV")
+                print(self.env.environment)
+                print(self.env.temp_environment)
             else:
                 result = copy.deepcopy(self.__eval_expr(actual_ast))
+                if result.type() == Type.LAMBDA:
+                    result = self.env.create_deep_copy_lamb(result.value())
+                    result = Value(Type.LAMBDA, result)
                 self.env.create(arg_name, result)
         _, return_val = self.__run_statements(func_ast.get("statements"))
         self.env.pop()
@@ -182,9 +189,9 @@ class Interpreter(InterpreterBase):
             else:
                 self.env.set_ref(var_name, value_obj)
 
-    def __eval_expr(self, expr_ast, var_name = None):
-        # print("\nhere expr")
-        # print("type: " + str(expr_ast.elem_type))
+    def __eval_expr(self, expr_ast, ref_name = None):
+        print("\nhere expr")
+        print(expr_ast)
         if expr_ast.elem_type == InterpreterBase.NIL_DEF:
             # print("getting as nil")
             return Interpreter.NIL_VALUE
@@ -196,15 +203,21 @@ class Interpreter(InterpreterBase):
         if expr_ast.elem_type == InterpreterBase.BOOL_DEF:
             return Value(Type.BOOL, expr_ast.get("val"))
         if expr_ast.elem_type == InterpreterBase.VAR_DEF:
-            var_name = expr_ast.get("name")
+            var_name = expr_ast.get('name')
             val = self.env.get(var_name)
+            print("FROM EVAL EXPR", val)
             if val is None:
                 #check if the passed variable is a function
                 val = self.__handle_function_assignment(var_name)
                 if val is None:
-                    super().error(ErrorType.NAME_ERROR, f"Variable {var_name} not found")
+                    if self.env.check_for_ref(var_name):
+                        val = self.env.get(self.env.check_for_ref(var_name))
+                    else:
+                        super().error(ErrorType.NAME_ERROR, f"Variable {var_name} not found")
             if val.type() == Type.REFARG:
-                val = self.env.get_ref(var_name)
+                print(val.value())
+                val = self.env.get_ref(val.value())
+            
 
             return val
         if expr_ast.elem_type == InterpreterBase.FCALL_DEF:
@@ -216,7 +229,7 @@ class Interpreter(InterpreterBase):
         if expr_ast.elem_type == Interpreter.NOT_DEF:
             return self.__eval_unary(expr_ast, Type.BOOL, lambda x: not x)
         if expr_ast.elem_type == InterpreterBase.LAMBDA_DEF:
-            return self.__handle_lambda_assignment(expr_ast, var_name)
+            return self.__handle_lambda_assignment(expr_ast, ref_name)
 
 
     
